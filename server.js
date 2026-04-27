@@ -6,6 +6,23 @@ app.use(cors()); // Allow requests from any domain (your WordPress site)
 app.use(express.json());
 
 /* ═══════════════════════════════════════════════════════
+   API KEY PROTECTION
+   All requests must include header: x-api-key: YOUR_KEY
+   ═══════════════════════════════════════════════════════ */
+const VALID_API_KEY = process.env.API_KEY || 'AS-59d2356735666e912c9da0a7efd84d32472bbb7a0659649f';
+
+app.use((req, res, next) => {
+  /* Allow health check without key */
+  if (req.path === '/') return next();
+
+  const key = req.headers['x-api-key'];
+  if (!key || key !== VALID_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized — invalid or missing API key' });
+  }
+  next();
+});
+
+/* ═══════════════════════════════════════════════════════
    MOCK BOOKING DATA
    This simulates what digitalworkshop.nu API will return.
    Replace this section with real API call later.
