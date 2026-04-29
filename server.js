@@ -71,10 +71,16 @@ app.get('/bookings', async (req, res) => {
       [from, to]
     );
     const booked = {};
-    const start = new Date(from);
-    const end   = new Date(to);
+    /* Parse dates locally to avoid UTC timezone shift */
+    const [fy, fm, fd] = from.split('-').map(Number);
+    const [ty, tm, td] = to.split('-').map(Number);
+    const start = new Date(fy, fm - 1, fd);
+    const end   = new Date(ty, tm - 1, td);
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      booked[d.toISOString().split('T')[0]] = [];
+      const key = d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
+      booked[key] = [];
     }
     result.rows.forEach(row => {
       const key = row.date.split('T')[0];
