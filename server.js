@@ -125,6 +125,49 @@ app.get('/admin/bookings', async (req, res) => {
   }
 });
 
+/* PUT /admin/bookings/:id — Update an existing booking */
+app.put('/admin/bookings/:id', async (req, res) => {
+  const { id } = req.params;
+  const { date, time, name, phone, email, reg, message } = req.body;
+
+  if (!date || !time || !name || !phone || !email) {
+    return res.status(400).json({ error: 'Missing required fields: date, time, name, phone, email' });
+  }
+
+  try {
+    /* Check if new date+time is already taken by another booking */
+    const conflict = await pool.query(
+      `SELECT id FROM bookings WHERE date = $1 AND time = $2 AND id != $3`,
+      [date, time, id]
+    );
+
+    if (conflict.rows.length > 0) {
+      return res.status(409).json({ error: 'This time slot is already booked by another customer' });
+    }
+
+    /* Update the booking */
+    const result = await pool.query(
+      `UPDATE bookings
+       SET date = $1, time = $2, name = $3, phone = $4, email = $5, reg = $6, message = $7
+       WHERE id = $8
+       RETURNING *`,
+      [date, time, name, phone, email, reg || '', message || '', id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    console.log('Booking updated: ID ' + id + ' -> ' + date + ' at ' + time + ' — ' + name);
+
+    res.json({ success: true, booking: result.rows[0] });
+
+  } catch (err) {
+    console.error('PUT /admin/bookings error:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 /* DELETE /admin/bookings/:id — Cancel a booking */
 app.delete('/admin/bookings/:id', async (req, res) => {
   try {
